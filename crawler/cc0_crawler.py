@@ -6,13 +6,17 @@ Created on Tue Jun  1 19:12:47 2021
 """
 
 import requests
+import urllib3
 from bs4 import BeautifulSoup
 import time
 from tqdm import tqdm
 from fake_useragent import UserAgent
 import copy
 import os
-# import numpy as np
+import selenium
+from selenium import webdriver
+from selenium.webdriver.chrome.options import Options
+
 
 # a list of textures to NOT include
 filters = ['AcousticFoam',
@@ -55,8 +59,11 @@ def main():
     # agent to request
     user_agent = UserAgent()
     download_url = []
-    
     method_url = [url + '&method=PBRMultiAngle']
+
+    options = Options()
+    options.add_argument('--headless=new')
+    driver = webdriver.Chrome(options=options)
 
     # for methods with multiple pages of content (1 page has 180 links)
     offsets = [0, 180, 360, 540, 720, 900]
@@ -68,14 +75,14 @@ def main():
     #%%
     # =========================== request the list to "download_url"===================
     for i in method_url:
-
-        re = requests.get(i, headers = { 'user-agent': user_agent.random })
-        soup = BeautifulSoup(re.text,'html.parser')
+        driver.get(i)
+        re = driver.page_source
+        soup = BeautifulSoup(re,'html.parser')
 
         elems = soup.find_all('a')
         for elem in elems:
             # texture_url + elem = each download url
-            if elem.get('href').startswith("/view?id="):
+            if elem.get('href') and elem.get('href').startswith("/view?id="):
                 n = elem.get('href').split('/')[-1]
                 download_url.append(home + n)
 
@@ -106,18 +113,25 @@ def main():
             continue
     # ==========================
         # print(copy_download_url[i])
-        re = requests.get(copy_download_url[i], # https://ambientcg.com/view?id=Tiles098
-                        headers = { 'user-agent': user_agent.random })
-        soup = BeautifulSoup(re.text,'html.parser')
+        import urllib3
+        import requests
+        import warnings
+
+        urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
+        warnings.filterwarnings('ignore', category=urllib3.exceptions.InsecureRequestWarning)
+
+        driver.get(copy_download_url[i])
+        re = driver.page_source
+        soup = BeautifulSoup(re,'html.parser')
 
         # if you want to choose png or JPG
         zip_url = []
-        elems = soup.find_all('a', class_= "TextLink")
+        elems = soup.find_all('a', class_= "asset-download")
         for elem in elems:
             zip_url.append(elem.get('href'))
 
         r = requests.get(zip_url[0], # https://ambientcg.com/get?file=Tiles098_1K-JPG.zip
-                        headers = { 'user-agent': user_agent.random })
+                        headers = { 'user-agent': user_agent.random }, verify=False)
 
         with open(output_path + zip_url[0].split('=')[-1], "wb") as zipfile:
             zipfile.write(r.content)
