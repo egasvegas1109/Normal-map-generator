@@ -16,7 +16,9 @@ import os
 import selenium
 from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
-
+import urllib3
+import requests
+import warnings
 
 # a list of textures to NOT include
 filters = ['AcousticFoam',
@@ -105,7 +107,7 @@ def main():
     #%%
     # =========================== request download url ===================
     counts = 0
-    for i in tqdm(range(len(copy_download_url))):
+    for i in tqdm(range(len(set(copy_download_url)))):
     # ==========================
         # 如果爬的過程斷掉，從多少開始...
         if i<counts:
@@ -113,9 +115,6 @@ def main():
             continue
     # ==========================
         # print(copy_download_url[i])
-        import urllib3
-        import requests
-        import warnings
 
         urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
         warnings.filterwarnings('ignore', category=urllib3.exceptions.InsecureRequestWarning)
@@ -130,11 +129,27 @@ def main():
         for elem in elems:
             zip_url.append(elem.get('href'))
 
-        r = requests.get(zip_url[0], # https://ambientcg.com/get?file=Tiles098_1K-JPG.zip
-                        headers = { 'user-agent': user_agent.random }, verify=False)
+        file_name = zip_url[0].split('=')[-1]
+        file_path = os.path.join(output_path, file_name)
 
-        with open(output_path + zip_url[0].split('=')[-1], "wb") as zipfile:
-            zipfile.write(r.content)
+        if os.path.exists(file_path):
+            print(f"[{i}] Уже скачан, пропуск: {file_name}")
+            continue
+
+        try:
+            r = requests.get(
+                zip_url[0],
+                headers={'user-agent': user_agent.random},
+                verify=False,
+                proxies=None
+            )
+
+            with open(file_path, "wb") as zipfile:
+                zipfile.write(r.content)
+
+            print(f"[{i}] Скачан: {file_name}")
+        except Exception as e:
+            print(f"[{i}] Ошибка при скачивании {file_name}: {e}")
 
         time.sleep(0.1)
         counts += 1
