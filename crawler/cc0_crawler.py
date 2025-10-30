@@ -66,7 +66,7 @@ def main():
     options.add_argument('--headless=new')
     driver = webdriver.Chrome(options=options)
 
-    materials_name = ['grass', 'ground', 'asphalt', 'wood', 'metal', 'brick']
+    materials_name = ['grass', 'ground', 'asphalt', 'wood', 'metal', 'brick', 'rocks', 'floor']
     for offset in materials_name:
         method_url.append(url + '&q={}'.format(offset))
 
