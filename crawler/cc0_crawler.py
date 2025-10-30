@@ -35,7 +35,6 @@ filters = ['AcousticFoam',
   'Painting',
   'PineNeedles',
   'Porcelain',
-  'Road',
   'RockBrush',
   'Rust001',
   'Sign',
@@ -61,18 +60,15 @@ def main():
     # agent to request
     user_agent = UserAgent()
     download_url = []
-    method_url = [url + '&method=PBRMultiAngle']
+    method_url = []
 
     options = Options()
     options.add_argument('--headless=new')
     driver = webdriver.Chrome(options=options)
 
-    # for methods with multiple pages of content (1 page has 180 links)
-    offsets = [0, 180, 360, 540, 720, 900]
-    for offset in offsets:
-        method_url.append(url + '&method=PBRApproximated' + '&offset={}'.format(offset))
-        method_url.append(url + '&method=PBRPhotogrammetry' + '&offset={}'.format(offset))
-        method_url.append(url + '&method=PBRProcedural' + '&offset={}'.format(offset))
+    materials_name = ['grass', 'ground', 'asphalt', 'wood', 'metal', 'brick']
+    for offset in materials_name:
+        method_url.append(url + '&q={}'.format(offset))
 
     #%%
     # =========================== request the list to "download_url"===================
@@ -127,7 +123,8 @@ def main():
         zip_url = []
         elems = soup.find_all('a', class_= "asset-download")
         for elem in elems:
-            zip_url.append(elem.get('href'))
+            if '1K' in elem.text and 'PNG' in elem.text:
+                zip_url.append(elem.get('href'))
 
         file_name = zip_url[0].split('=')[-1]
         file_path = os.path.join(output_path, file_name)
