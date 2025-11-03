@@ -42,18 +42,19 @@ PARAMS = {
     "Type": "Normal net",
 
     # "pretrain": "norm_net_epoch_200.pth",
-    "pretrain": None,
+    "pretrain": "norm_net_epoch_100.pth",
 
     "train": {
-        "epochs": 100,
-        "batch": 4,
+        "epochs": 200,
+        "batch": 8,
         "lr": 5e-4,
         "split": 0.9,
-        "nWorkers": 2,
+        "nWorkers": 4,
+        "checkpoint_interv": 10,
         },
     
     "valid": {
-        "num": 2,  # should be smaller than batch size
+        "num": 4,  # should be smaller than batch size
         "log_interv": 10,
     },
 
@@ -111,11 +112,22 @@ class TrainDataset(Dataset):
         img_filename = os.path.join(self.img_dir, self.names[i]) + ".jpg"
         target_filename = os.path.join(self.target_dir, self.names[i]) + ".jpg"
 
-        img = Image.open(img_filename).convert('RGB')
-        target = Image.open(target_filename).convert('RGB')
+        img = Image.open(img_filename)
+        target = Image.open(target_filename)
+
+        # Добавьте эти строки:
+        if img.mode == 'P':  # Если палитровое изображение
+            img = img.convert('RGBA').convert('RGB')
+        else:
+            img = img.convert('RGB')
+
+        if target.mode == 'P':
+            target = target.convert('RGBA').convert('RGB')
+        else:
+            target = target.convert('RGB')
+
         img = transform(img)
         target = transform(target)
-
         return (img, target, self.names[i])
 
 class TestDataset(Dataset):
@@ -127,9 +139,15 @@ class TestDataset(Dataset):
         return len(self.names)
 
     def __getitem__(self, i):
-        img = Image.open(self.file_list[i]).convert('RGB')
-        img = test_transform(img)
+        img = Image.open(self.file_list[i])
 
+        # Добавьте проверку:
+        if img.mode == 'P':
+            img = img.convert('RGBA').convert('RGB')
+        else:
+            img = img.convert('RGB')
+
+        img = test_transform(img)
         return img, self.names[i]
 
 #%%
@@ -159,7 +177,7 @@ def train(img_folder, label_folder, name_list, valid_folder, pretrained=None):
     valid_loss_hist = []
 
     if pretrained:
-        checkpoint = torch.load(os.path.join(CHK_OUT, pretrained))
+        checkpoint = torch.load(os.path.join(CHK_OUT, pretrained), weights_only=False)
         net.load_state_dict(checkpoint["model"])
         optimizer.load_state_dict(checkpoint["optim"])
         train_loss_hist = checkpoint["train_loss_hist"]
@@ -253,6 +271,17 @@ def train(img_folder, label_folder, name_list, valid_folder, pretrained=None):
 
             if PARAMS["writer"]:
                 writer.add_scalar("Loss/Valid", valid_loss_hist[-1], epoch)
+
+        if (epoch + 1) % PARAMS["train"]["checkpoint_interv"] == 0:
+            checkpoint_path = os.path.join(CHK_OUT, f"norm_net_epoch_{epoch + 1:03}.pth")
+            torch.save({
+                "epoch": epoch + 1,
+                "model": net.state_dict(),
+                "optim": optimizer.state_dict(),
+                "train_loss_hist": train_loss_hist,
+                "valid_loss_hist": valid_loss_hist
+            }, checkpoint_path)
+            print(f"\n💾 Checkpoint saved: {checkpoint_path}")
 
         if (epoch+1) % PARAMS["valid"]["log_interv"] == 0 or epoch == 0:
             with torch.no_grad():

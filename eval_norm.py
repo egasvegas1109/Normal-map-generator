@@ -23,9 +23,9 @@ import matplotlib.pyplot as plt
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 #%%
-PATH_CHK = "checkpoints/norm/norm_net_epoch_020.pth"
+PATH_CHK = "checkpoints/norm/norm_net_epoch_200.pth"
 DIR_EVAL = "test"
-CROP = 1024
+CROP = 512
 
 #%%
 transform = transforms.Compose([
@@ -38,7 +38,7 @@ transform = transforms.Compose([
 
 class TestDataset(Dataset):
     def __init__(self, img_dir):
-        self.file_list = glob.glob(img_dir+"/*.jpg")
+        self.file_list = glob.glob(img_dir+"/*.png")
         self.names = [os.path.splitext(os.path.basename(fp))[0] for fp in self.file_list]
 
     def __len__(self):
@@ -79,7 +79,7 @@ def main():
     input_folder = os.path.join(DIR_EVAL, "input")
 
     norm_net = Unet().to(device)
-    checkpoint = torch.load(PATH_CHK)
+    checkpoint = torch.load(PATH_CHK, weights_only=False)
     norm_net.load_state_dict(checkpoint["model"])
 
     test(norm_net, input_folder, DIR_EVAL)
