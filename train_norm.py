@@ -42,10 +42,10 @@ PARAMS = {
     "Type": "Normal net",
 
     # "pretrain": "norm_net_epoch_200.pth",
-    "pretrain": "norm_net_epoch_100.pth",
+    "pretrain": "norm_net_epoch_200.pth",
 
     "train": {
-        "epochs": 200,
+        "epochs": 300,
         "batch": 8,
         "lr": 5e-4,
         "split": 0.9,
@@ -54,7 +54,7 @@ PARAMS = {
         },
     
     "valid": {
-        "num": 4,  # should be smaller than batch size
+        "num": 8,  # should be smaller than batch size
         "log_interv": 10,
     },
 
